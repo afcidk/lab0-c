@@ -45,6 +45,7 @@ void q_free(queue_t *q)
     while (ptr) {
         prev = ptr;
         ptr = ptr->next;
+        free(prev->value);
         free(prev);
     }
 
@@ -67,12 +68,19 @@ bool q_insert_head(queue_t *q, char *s)
     }
 
     ++q->size;
-
     newh = malloc(sizeof(list_ele_t));
     if (!newh)
         return false;
 
-    newh->value = strdup(s);
+    char *value = malloc((strlen(s) + 1) * sizeof(char));
+    if (!value) {
+        free(newh);
+        return false;
+    }
+    memset(value, 0, strlen(s) + 1);
+    strcpy(value, s);
+
+    newh->value = value;
     newh->next = q->head;
     q->head = newh;
 
@@ -103,7 +111,15 @@ bool q_insert_tail(queue_t *q, char *s)
     if (!newh)
         return false;
 
-    newh->value = strdup(s);
+    char *value = malloc((strlen(s) + 1) * sizeof(char));
+    if (!value) {
+        free(newh);
+        return false;
+    }
+    memset(value, 0, strlen(s) + 1);
+    strcpy(value, s);
+    newh->value = value;
+
 
     if (q->size == 1) {
         q->tail = newh;
@@ -147,6 +163,7 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 
     /* You need to fix up this code. */
     q->head = q->head->next;
+    free(tmp->value);
     free(tmp);
     --q->size;
 
