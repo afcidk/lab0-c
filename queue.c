@@ -39,14 +39,14 @@ void q_free(queue_t *q)
 {
     if (!q)
         return;
-    list_ele_t *ptr = q->head;
-    list_ele_t *prev = NULL;
+    list_ele_t *tmp = NULL;
 
-    while (ptr) {
-        prev = ptr;
-        ptr = ptr->next;
-        free(prev->value);
-        free(prev);
+    while (q->head) {
+        tmp = q->head;
+        q->head = q->head->next;
+
+        free(tmp->value);
+        free(tmp);
     }
 
     /* Free queue structure */
