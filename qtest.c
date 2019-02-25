@@ -25,6 +25,7 @@
 
 #include "console.h"
 #include "report.h"
+#include "dudect/fixture.h"
 
 /***** Settable parameters *****/
 
@@ -515,11 +516,12 @@ static bool queue_quit(int argc, char *argv[])
 
 static void usage(char *cmd)
 {
-    printf("Usage: %s [-h] [-f IFILE][-v VLEVEL][-l LFILE]\n", cmd);
+    printf("Usage: %s [-h] [-t] [-f IFILE][-v VLEVEL][-l LFILE]\n", cmd);
     printf("\t-h         Print this information\n");
     printf("\t-f IFILE   Read commands from IFILE\n");
     printf("\t-v VLEVEL  Set verbosity level\n");
     printf("\t-l LFILE   Echo results to LFILE\n");
+    printf("\t-t         Test if is constant time\n");
     exit(0);
 }
 
@@ -535,10 +537,13 @@ int main(int argc, char *argv[])
     int level = 4;
     int c;
 
-    while ((c = getopt(argc, argv, "hv:f:l:")) != -1) {
+    while ((c = getopt(argc, argv, "htv:f:l:")) != -1) {
         switch (c) {
         case 'h':
             usage(argv[0]);
+            break;
+        case 't':
+            test_constant();
             break;
         case 'f':
             strncpy(buf, optarg, BUFSIZE);

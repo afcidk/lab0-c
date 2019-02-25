@@ -3,6 +3,9 @@ CFLAGS = -O0 -g -Wall -Werror
 
 GIT_HOOKS := .git/hooks/applied
 all: $(GIT_HOOKS) qtest
+DUDECT_OBJS = dudect/cpucycles.o dudect/fixture.o \
+			 dudect/ttest.o dudect/percentile.o \
+			 dudect/random.o dudect/constant.o
 
 $(GIT_HOOKS):
 	@scripts/install-git-hooks
@@ -11,8 +14,11 @@ $(GIT_HOOKS):
 queue.o: queue.c queue.h harness.h
 	$(CC) $(CFLAGS) -c queue.c 
 
-qtest: qtest.c report.c console.c harness.c queue.o
-	$(CC) $(CFLAGS) -o qtest qtest.c report.c console.c harness.c queue.o
+.c.o:
+	$(CC) -O2 -Idudect -c $< -o $@
+
+qtest: qtest.c report.c console.c harness.c queue.o $(DUDECT_OBJS)
+	$(CC) $(CFLAGS) -o qtest qtest.c report.c console.c harness.c queue.o $(DUDECT_OBJS) -lm
 
 test: qtest scripts/driver.py
 	scripts/driver.py
@@ -30,8 +36,10 @@ valgrind: qtest valgrind_existence
 	@echo "Test with specific case by running command:" 
 	@echo "scripts/driver.py -p $(patched_file) --valgrind -t <tid>"
 
+
 clean:
 	rm -f *.o *~ qtest /tmp/qtest.*
 	rm -rf *.dSYM
+	rm -f dudect/*.o
 	(cd traces; rm -f *~)
 
