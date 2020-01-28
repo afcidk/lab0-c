@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -182,6 +183,8 @@ char **parse_args(char *line, int *argcp)
             *dst++ = c;
         }
     }
+    /* Assign with null-terminated character to avoid heap overflow in strlen */
+    *dst = 0;
     /* Now assemble into array of strings */
     char **argv = calloc_or_fail(argc, sizeof(char *), "parse_args");
     size_t i;
@@ -264,7 +267,6 @@ void set_echo(bool on)
 {
     echo = on ? 1 : 0;
 }
-
 
 /* Built-in commands */
 bool do_quit_cmd(int argc, char *argv[])

@@ -1,12 +1,12 @@
-#include <stdlib.h>
-#include <string.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include "../queue.h"
 #include "dut.h"
 #include "random.h"
-#include "../queue.h"
 
 static queue_t *q = NULL;
 
@@ -76,8 +76,11 @@ void prepare_inputs(uint8_t *input_data, uint8_t *classes)
 
 void siginthandler()
 {
-    if (test_mode)
+    // There are only two modes, gracefully quit using quit command.
+    if (test_mode == 1) {
+        interpret_cmd("quit\n");
         exit(0);
+    }
     printf("\nTesting q_size...... press Ctrl-C to leave.\n\n");
     test_mode = 1;
 }

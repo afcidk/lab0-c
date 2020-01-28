@@ -1,7 +1,7 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <strings.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
 #include "percentile.h"
 
 static int cmp(const int64_t *a, const int64_t *b)

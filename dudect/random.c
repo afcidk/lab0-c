@@ -1,7 +1,7 @@
-#include <stdint.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <unistd.h>
 #include "random.h"
 
 // shameless stolen from ebacs

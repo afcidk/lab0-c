@@ -1,3 +1,4 @@
+#include <stdint.h>
 typedef struct {
     double mean[2];
     double m2[2];

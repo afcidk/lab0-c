@@ -27,16 +27,16 @@
  *
  */
 
-#include <stdlib.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include "cpucycles.h"
-#include "ttest.h"
-#include "random.h"
 #include "fixture.h"
 #include "percentile.h"
+#include "random.h"
+#include "ttest.h"
 
 #define number_tests                                                    \
     (1 /* first order uncropped */ + number_percentiles /* cropped */ + \
@@ -79,9 +79,9 @@ static void measure(int64_t *ticks, uint8_t *input_data)
         if (test_mode == test_insert_tail) {
             sprintf(data, "it abc %ld\n",
                     (*(uint8_t *) input_data + i * chunk_size));
-            do_one_computation(data);
+            do_one_computation((u_int8_t *) data);
         } else
-            do_one_computation(data2);
+            do_one_computation((u_int8_t *) data2);
         ticks[i] = cpucycles();
     }
     ticks[number_measurements] = cpucycles();
@@ -237,7 +237,7 @@ static void doit(void)
 
         char data[20];
         sprintf(data, "ih abc %d\n", sum);
-        do_one_computation(data);
+        do_one_computation((u_int8_t *) data);
     }
 
     measure(ticks, input_data);
@@ -254,6 +254,17 @@ static void doit(void)
     free(exec_times);
     free(classes);
     free(input_data);
+}
+
+static void init_once(int mode)
+{
+    static int times = 0;
+    if (times == mode) {
+        for (int i = 0; i < number_tests; i++) {
+            t_init(t[i]);
+        }
+        ++times;
+    }
 }
 
 /*
@@ -278,22 +289,15 @@ void test_constant(void)
     printf("Note2: You should pass the original time limit (1 sec) first!\n\n");
     printf("\033[0mTesting insert_tail... Press Ctrl-C to enter next mode\n\n");
     init_dut();
-    for (int i = 0; i < number_tests; i++) {
+    for (int i = 0; i < number_tests; i++)
         t[i] = malloc(sizeof(t_ctx));
-        t_init(t[i]);
-    }
+    init_once(test_mode);
 
     for (;;) {
         real_init_dut();
         doit();
-        if (test_mode ==
-            test_size) {  // initialize the t-test variable for q_size test
-            init_dut();
-            for (int i = 0; i < number_tests; i++) {
-                t_init(t[i]);
-            }
-            test_mode = 2;
-        }
+        // initialize the t-test variable for q_size test
+        init_once(test_mode);
         leave_dut();
     }
 }

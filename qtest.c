@@ -24,8 +24,8 @@
 #include "queue.h"
 
 #include "console.h"
-#include "report.h"
 #include "dudect/fixture.h"
+#include "report.h"
 
 /***** Settable parameters *****/
 
