@@ -27,13 +27,15 @@
  *
  */
 
+#include "fixture.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../console.h"
+#include "constant.h"
 #include "cpucycles.h"
-#include "fixture.h"
 #include "percentile.h"
 #include "random.h"
 #include "ttest.h"
@@ -41,9 +43,12 @@
 #define number_tests                                                    \
     (1 /* first order uncropped */ + number_percentiles /* cropped */ + \
      1 /* second order uncropped */)
-#define enough_measurements 1000  // pretty arbitrary
+#define enough_measurements 10000  // pretty arbitrary
 #define number_percentiles 100
 
+extern const size_t chunk_size;
+extern const size_t number_measurements;
+extern int test_mode;
 static t_ctx *t[number_tests];
 static int64_t percentiles[number_percentiles] = {0};
 
@@ -52,7 +57,6 @@ static int64_t percentiles[number_percentiles] = {0};
 #define t_threshold_moderate \
     10  // test failed. Pankaj likes 4.5 but let's be more lenient
 
-extern int test_mode;
 enum { test_insert_tail, test_size };
 static void __attribute__((noreturn)) die(void)
 {
@@ -71,26 +75,41 @@ static void prepare_percentiles(int64_t *ticks)
     }
 }
 
-static void measure(int64_t *ticks, uint8_t *input_data)
+static void measure(int64_t *before_ticks,
+                    int64_t *after_ticks,
+                    uint8_t *input_data)
 {
-    char data2[5] = "size";
-    for (size_t i = 0; i < number_measurements; i++) {
-        char data[20];
-        if (test_mode == test_insert_tail) {
-            sprintf(data, "it abc %ld\n",
-                    (*(uint8_t *) input_data + i * chunk_size));
-            do_one_computation((u_int8_t *) data);
-        } else
-            do_one_computation((u_int8_t *) data2);
-        ticks[i] = cpucycles();
+    if (test_mode == test_insert_tail) {
+        for (size_t i = 0; i < number_measurements; i++) {
+            dut_new();
+            dut_insert_head("abc", *(uint16_t*)(input_data+i*chunk_size)%1000);
+
+            before_ticks[i] = cpucycles();
+            dut_insert_tail("abc", 1);
+            after_ticks[i] = cpucycles();
+
+            dut_free();
+        }
+    } else {
+        for (size_t i = 0; i < number_measurements; i++) {
+            dut_new();
+            dut_insert_head("abc", *(uint16_t*)(input_data+i*chunk_size)%1000);
+
+            before_ticks[i] = cpucycles();
+            dut_size(1);
+            after_ticks[i] = cpucycles();
+
+            dut_free();
+        }
     }
-    ticks[number_measurements] = cpucycles();
 }
 
-static void differentiate(int64_t *exec_times, int64_t *ticks)
+static void differentiate(int64_t *exec_times,
+                          int64_t *before_ticks,
+                          int64_t *after_ticks)
 {
     for (size_t i = 0; i < number_measurements; i++) {
-        exec_times[i] = ticks[i + 1] - ticks[i];
+        exec_times[i] = after_ticks[i] - before_ticks[i];
     }
 }
 
@@ -106,6 +125,7 @@ static void update_statistics(int64_t *exec_times, uint8_t *classes)
         }
 
         // do a t-test on the execution time
+        // printf("class: %d, diff: %ld\n", classes[i], difference);
         t_push(t[0], difference, classes[i]);
 
         // do a t-test on cropped execution times, for several cropping
@@ -140,6 +160,7 @@ static void wrap_report(t_ctx *x) {
 
 // which t-test yields max t value?
 static int max_test(void)
+/* Test size */
 {
     int ret = 0;
     double max = 0;
@@ -218,86 +239,61 @@ static void report(void)
 static void doit(void)
 {
     // XXX move these callocs to parent
-    int64_t *ticks = calloc(number_measurements + 1, sizeof(int64_t));
+    int64_t *before_ticks = calloc(number_measurements + 1, sizeof(int64_t));
+    int64_t *after_ticks = calloc(number_measurements + 1, sizeof(int64_t));
     int64_t *exec_times = calloc(number_measurements, sizeof(int64_t));
     uint8_t *classes = calloc(number_measurements, sizeof(uint8_t));
     uint8_t *input_data =
         calloc(number_measurements * chunk_size, sizeof(uint8_t));
 
-    if (!ticks || !exec_times || !classes || !input_data) {
+    if (!before_ticks || !after_ticks || !exec_times || !classes ||
+        !input_data) {
         die();
     }
 
     prepare_inputs(input_data, classes);
-    if (test_mode == test_size || test_mode == test_size + 1) {
-        int sum = 0;
-        for (size_t i = 0; i < number_measurements; i++) {
-            sum += *(uint8_t *) (input_data + i * chunk_size);
-        }
 
-        char data[20];
-        sprintf(data, "ih abc %d\n", sum);
-        do_one_computation((u_int8_t *) data);
-    }
-
-    measure(ticks, input_data);
-    differentiate(exec_times, ticks);  // inplace
+    measure(before_ticks, after_ticks, input_data);
+    differentiate(exec_times, before_ticks, after_ticks);  // inplace
 
     // we compute the percentiles only if they are not filled yet
-    if (percentiles[number_percentiles - 1] == 0) {
+    if (percentiles[number_percentiles-1] != 0) 
         prepare_percentiles(exec_times);
-    }
     update_statistics(exec_times, classes);
     report();
 
-    free(ticks);
+    free(before_ticks);
+    free(after_ticks);
     free(exec_times);
     free(classes);
     free(input_data);
 }
 
-static void init_once(int mode)
+static void init_once()
 {
-    static int times = 0;
-    if (times == mode) {
-        for (int i = 0; i < number_tests; i++) {
-            t_init(t[i]);
-        }
-        ++times;
+    for (int i = 0; i < number_tests; i++) {
+        t_init(t[i]);
     }
+    memset(percentiles, 0, number_percentiles * sizeof(int64_t));
 }
 
-/*
- * For insert_tail, we just need to test the insert_tail function
- * For size, we need to add some string to the queue (maybe using insert_head
- * since it's O(1),
- * then call the size function
- */
 void test_constant(void)
 {
-    printf(
-        "\033[1;32mNote1: Since we use statictic method to test if the "
-        "function has constant\n"
-        "       time complexity, sometimes it requires larger time to show "
-        "that it\n"
-        "       REALLY IS POLYNOMINAL time, however, you can tell "
-        "instinctively that\n"
-        "       it is not constant time if the calculating process is too "
-        "slow. :)\n"
-        "       (normally, the change of \"max t\" field should be really "
-        "fast)\n\n");
-    printf("Note2: You should pass the original time limit (1 sec) first!\n\n");
-    printf("\033[0mTesting insert_tail... Press Ctrl-C to enter next mode\n\n");
     init_dut();
     for (int i = 0; i < number_tests; i++)
         t[i] = malloc(sizeof(t_ctx));
-    init_once(test_mode);
-
-    for (;;) {
-        real_init_dut();
+    
+    /* Test insert_tail */
+    printf("Testing insert_tail...\n");
+    init_once();
+    for (int i = 0; i < enough_measurements/number_measurements+1; ++i)
         doit();
-        // initialize the t-test variable for q_size test
-        init_once(test_mode);
-        leave_dut();
-    }
+    /* Test size */
+    printf("Testing size...\n");
+    ++test_mode;
+    init_once();
+    for (int i = 0; i < enough_measurements/number_measurements+1; ++i)
+        doit();
+    interpret_cmd("quit\n");
+    exit(0);
 }

@@ -1,4 +1,5 @@
 /* Implementation of simple command-line interface */
+#include <stdbool.h>
 
 /* Each command defined in terms of a function */
 typedef bool (*cmd_function)(int argc, char *argv[]);

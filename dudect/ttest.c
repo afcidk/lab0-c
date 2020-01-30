@@ -9,12 +9,12 @@
  *
  */
 
+#include "ttest.h"
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "ttest.h"
 
 void t_push(t_ctx *ctx, double x, uint8_t class)
 {

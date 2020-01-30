@@ -1,5 +1,7 @@
 CC = gcc
 CFLAGS = -O0 -g -Wall -Werror
+CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+LD_FLAGS += -fsanitize=address
 
 GIT_HOOKS := .git/hooks/applied
 all: $(GIT_HOOKS) qtest
@@ -15,7 +17,7 @@ queue.o: queue.c queue.h harness.h
 	$(CC) $(CFLAGS) -c queue.c 
 
 .c.o:
-	$(CC) -O2 -Idudect -c $< -o $@
+	$(CC) $(CFLAGS) -O0 -Idudect -c $< -o $@
 
 qtest: qtest.c report.c console.c harness.c queue.o $(DUDECT_OBJS)
 	$(CC) $(CFLAGS) -o qtest qtest.c report.c console.c harness.c queue.o $(DUDECT_OBJS) -lm

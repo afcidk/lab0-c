@@ -215,8 +215,9 @@ static bool interpret_cmda(int argc, char *argv[])
     /* Try to find matching command */
     cmd_ptr next_cmd = cmd_list;
     bool ok = true;
-    while (next_cmd && strcmp(argv[0], next_cmd->name) != 0)
+    while (next_cmd && strcmp(argv[0], next_cmd->name) != 0) {
         next_cmd = next_cmd->next;
+    }
     if (next_cmd) {
         ok = next_cmd->operation(argc, argv);
         if (!ok)

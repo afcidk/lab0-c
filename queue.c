@@ -102,27 +102,31 @@ bool q_insert_tail(queue_t *q, char *s)
 {
     list_ele_t *newh;
     if (!q) {
+        printf("Not q\n");
         return false;
     }
 
     ++q->size;
 
     newh = malloc(sizeof(list_ele_t));
-    if (!newh)
+    if (!newh)  {
+        printf("Not newh\n");
         return false;
+    }
 
     char *value = strdup(s);
     if (!value) {
+        printf("error\n");
         free(newh);
         return false;
     }
 
-    /* simulate O(n)
+    /* O(n)
     list_ele_t *ptr = q->head;
     while (ptr)
         ptr = ptr->next;
     */
-
+    
     newh->value = value;
 
     if (q->size == 1) {
@@ -182,9 +186,14 @@ int q_size(queue_t *q)
 {
     if (!q || !q->head)
         return 0;
-    /* simulate O(n)
+    /* O(n)
     list_ele_t *ptr = q->head;
-    while (ptr) ptr = ptr->next;
+    int cnt = 0;
+    while (ptr) {
+        ptr = ptr->next;
+        ++cnt;
+    }
+    return cnt;
     */
     return q->size;
 }
